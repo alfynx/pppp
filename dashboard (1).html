@@ -1,0 +1,960 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>ALFYNX TECHNOLOGIES — P2P Trading</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700;800&family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+/* ══ RESET & TOKENS ══ */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f6eee0;--surface:#fdf8f1;--card:#fffaf4;
+  --secondary:#e4b7a0;--accent:#a45c40;--accent2:#c47a5a;--accent3:#7a3820;
+  --dark:#2a1208;--text:#2c1608;--muted:#9e7460;--border:#ecdccc;
+  --green:#2d7a4f;--gbg:rgba(45,122,79,.1);
+  --red:#c0392b;--rbg:rgba(192,57,43,.1);
+  --blue:#2563b0;--bbg:rgba(37,99,176,.1);
+  --orange:#c05c1a;--obg:rgba(192,92,26,.1);
+  --sh:0 2px 12px rgba(164,92,64,.09);
+  --shm:0 4px 24px rgba(164,92,64,.14);
+  --r:12px;--rs:8px;--rx:5px;
+  --t:.2s cubic-bezier(.4,0,.2,1);
+}
+html{height:100%}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px}
+input,select,textarea,button{font-family:inherit;font-size:inherit}
+button{cursor:pointer;border:none;background:none}
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--secondary);border-radius:99px}
+
+/* ══ LAYOUT ══ */
+.app{display:flex;min-height:100vh}
+
+/* ══════════════════════════
+   SIDEBAR — ALWAYS VISIBLE
+   ON DESKTOP (≥861px)
+══════════════════════════ */
+.sidebar{
+  width:220px;min-height:100vh;flex-shrink:0;
+  background:var(--dark);
+  position:fixed;top:0;left:0;bottom:0;
+  display:flex;flex-direction:column;
+  z-index:200;overflow-y:auto;
+  /* Always visible on desktop */
+}
+.main{margin-left:220px;flex:1;display:flex;flex-direction:column}
+
+/* Sidebar internals */
+.logo-area{padding:20px 16px 14px;border-bottom:1px solid rgba(255,255,255,.08)}
+.logo-row{display:flex;align-items:center;gap:10px;margin-bottom:4px}
+.logo-icon{
+  width:36px;height:36px;min-width:36px;border-radius:9px;
+  background:linear-gradient(135deg,var(--accent2),var(--accent3));
+  display:flex;align-items:center;justify-content:center;
+  font-size:1.1rem;color:#fff;font-weight:700;
+  box-shadow:0 3px 10px rgba(164,92,64,.4);
+}
+.logo-name{
+  font-family:'Playfair Display',serif;
+  color:#fff;font-size:.82rem;font-weight:700;line-height:1.25;
+}
+.logo-sub{font-size:.58rem;color:var(--muted);text-transform:uppercase;letter-spacing:.12em;display:block;margin-top:1px}
+.logo-tag{font-size:.55rem;color:rgba(255,255,255,.18);margin-top:2px}
+
+.nav-section-label{
+  padding:14px 16px 4px;
+  font-size:.58rem;color:rgba(255,255,255,.22);
+  text-transform:uppercase;letter-spacing:.14em;font-weight:700;
+}
+.nav-links{padding:3px 8px;flex:1}
+.nav-link{
+  display:flex;align-items:center;gap:10px;
+  padding:9px 10px;border-radius:var(--rs);
+  color:rgba(255,255,255,.42);font-size:.82rem;font-weight:500;
+  cursor:pointer;transition:all var(--t);margin-bottom:2px;
+  position:relative;user-select:none;
+}
+.nav-link:hover{background:rgba(228,183,160,.09);color:rgba(255,255,255,.76)}
+.nav-link.active{
+  background:linear-gradient(90deg,rgba(164,92,64,.3),rgba(164,92,64,.06));
+  color:var(--secondary);
+}
+.nav-link.active::before{
+  content:'';position:absolute;left:0;top:25%;bottom:25%;
+  width:3px;background:var(--secondary);border-radius:0 3px 3px 0;
+}
+.nav-icon{font-size:.95rem;width:18px;text-align:center;flex-shrink:0}
+.nav-badge{
+  margin-left:auto;background:var(--accent);color:#fff;
+  font-size:.58rem;font-weight:700;padding:1px 6px;border-radius:20px;
+}
+.sidebar-foot{padding:10px 16px;border-top:1px solid rgba(255,255,255,.05)}
+.sidebar-foot-text{font-size:.6rem;color:rgba(255,255,255,.16)}
+
+/* ══════════════════════════
+   BOTTOM NAV — MOBILE ONLY
+   (shown at ≤860px)
+══════════════════════════ */
+.bottom-nav{
+  display:none; /* hidden on desktop */
+  position:fixed;bottom:0;left:0;right:0;z-index:300;
+  background:var(--dark);
+  border-top:1.5px solid rgba(255,255,255,.1);
+  box-shadow:0 -4px 18px rgba(0,0,0,.25);
+}
+.bn-items{display:flex}
+.bn-item{
+  flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:9px 2px 7px;gap:3px;
+  color:rgba(255,255,255,.38);font-size:.55rem;font-weight:700;
+  cursor:pointer;transition:color var(--t);
+  text-transform:uppercase;letter-spacing:.05em;
+  position:relative;
+}
+.bn-item.active{color:var(--secondary)}
+.bn-item.active::after{
+  content:'';position:absolute;top:0;left:20%;right:20%;height:2px;
+  background:var(--secondary);border-radius:0 0 3px 3px;
+}
+.bn-icon{font-size:1.15rem;line-height:1}
+
+/* ══ TOPBAR ══ */
+.topbar{
+  background:var(--surface);border-bottom:1.5px solid var(--border);
+  padding:10px 22px;
+  display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  position:sticky;top:0;z-index:100;
+  backdrop-filter:blur(8px);
+}
+.topbar-title{
+  font-family:'Playfair Display',serif;
+  font-size:.95rem;font-weight:700;color:var(--accent);margin-right:auto;
+}
+.topbar-title small{display:block;font-family:'DM Sans',sans-serif;font-size:.62rem;font-weight:400;color:var(--muted)}
+.flt-grp{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.flt-label{font-size:.62rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.09em}
+.flt-sel{
+  background:var(--card);border:1.5px solid var(--border);border-radius:var(--rx);
+  padding:5px 22px 5px 8px;font-size:.78rem;font-weight:500;color:var(--text);
+  appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='9' height='5'%3E%3Cpath d='M0 0l4.5 5 4.5-5z' fill='%23a45c40'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 7px center;
+  min-width:72px;cursor:pointer;transition:border-color var(--t);
+}
+.flt-sel:focus{outline:none;border-color:var(--accent2)}
+
+/* ══ BUTTONS ══ */
+.btn{display:inline-flex;align-items:center;gap:5px;border-radius:var(--rx);padding:7px 14px;font-size:.78rem;font-weight:600;transition:all var(--t);border:none;cursor:pointer}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-primary:hover{background:var(--accent3);transform:translateY(-1px);box-shadow:0 3px 12px rgba(164,92,64,.3)}
+.btn-ghost{background:transparent;color:var(--accent);border:1.5px solid var(--border)}
+.btn-ghost:hover{border-color:var(--accent);background:rgba(164,92,64,.06)}
+.btn-danger{background:var(--rbg);color:var(--red);border:1.5px solid rgba(192,57,43,.18)}
+.btn-danger:hover{background:rgba(192,57,43,.18)}
+.btn-success{background:var(--gbg);color:var(--green);border:1.5px solid rgba(45,122,79,.18)}
+.btn-success:hover{background:rgba(45,122,79,.18)}
+.btn-sm{padding:5px 11px;font-size:.73rem}
+.btn-xs{padding:3px 8px;font-size:.68rem}
+
+/* ══ CONTENT / SECTIONS ══ */
+.content{padding:18px 22px 46px}
+.section{display:none}
+.section.active{display:block}
+
+/* ══ KPI GRID ══ */
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px}
+.kpi-card{
+  background:var(--card);border:1.5px solid var(--border);border-radius:var(--r);
+  padding:16px 18px 13px;position:relative;overflow:hidden;box-shadow:var(--sh);
+  transition:transform var(--t),box-shadow var(--t);
+}
+.kpi-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;border-radius:var(--r) var(--r) 0 0}
+.kpi-card.k-buy::before{background:linear-gradient(90deg,#4a90d9,#6aaef5)}
+.kpi-card.k-sell::before{background:linear-gradient(90deg,#2d7a4f,#3daa6a)}
+.kpi-card.k-exp::before{background:linear-gradient(90deg,#e67e22,#f5a042)}
+.kpi-card.k-profit::before{background:linear-gradient(90deg,var(--accent),var(--accent2))}
+.kpi-card:hover{transform:translateY(-2px);box-shadow:var(--shm)}
+.kpi-icon{width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:1.05rem;margin-bottom:10px}
+.k-buy .kpi-icon{background:var(--bbg)} .k-sell .kpi-icon{background:var(--gbg)} .k-exp .kpi-icon{background:var(--obg)} .k-profit .kpi-icon{background:rgba(164,92,64,.1)}
+.kpi-label{font-size:.62rem;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);margin-bottom:3px}
+.kpi-value{font-family:'Playfair Display',serif;font-size:1.35rem;font-weight:700;color:var(--text);line-height:1.1}
+.kpi-value.pos{color:var(--green)} .kpi-value.neg{color:var(--red)}
+.kpi-sub{margin-top:5px;font-size:.68rem;color:var(--muted)}
+
+/* ══ CHARTS ══ */
+.chart-row{display:grid;grid-template-columns:1.7fr 1fr;gap:14px;margin-bottom:16px}
+.chart-row-2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px}
+.chart-card{background:var(--card);border:1.5px solid var(--border);border-radius:var(--r);padding:18px;box-shadow:var(--sh)}
+.chart-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.chart-title{font-family:'Playfair Display',serif;font-size:.88rem;font-weight:700;color:var(--text)}
+.chart-badge{font-size:.6rem;padding:2px 7px;border-radius:20px;background:rgba(164,92,64,.1);color:var(--accent);font-weight:700;text-transform:uppercase;letter-spacing:.06em}
+.chart-box{position:relative;height:210px}
+.chart-box.tall{height:250px}
+
+/* ══ SECTION TITLE ══ */
+.sec-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.sec-title{font-family:'Playfair Display',serif;font-size:1rem;font-weight:700;color:var(--text)}
+
+/* ══ TX TABS ══ */
+.tx-wrap{background:var(--card);border:1.5px solid var(--border);border-radius:var(--r);box-shadow:var(--sh);overflow:hidden}
+.tx-tabs{display:flex;border-bottom:1.5px solid var(--border);background:var(--surface)}
+.tx-tab{padding:9px 18px;font-size:.78rem;font-weight:600;color:var(--muted);cursor:pointer;border:none;background:none;border-bottom:2.5px solid transparent;transition:all var(--t)}
+.tx-tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.tx-pane{display:none}
+.tx-pane.active{display:block}
+
+/* ══ ADD FORM ══ */
+.add-bar{overflow:hidden;max-height:0;transition:max-height .4s cubic-bezier(.4,0,.2,1),padding .3s}
+.add-bar.open{max-height:600px;padding:16px 18px}
+.add-inner{background:linear-gradient(135deg,rgba(228,183,160,.16),rgba(246,238,224,.4));border:1.5px dashed var(--secondary);border-radius:var(--r);padding:16px 18px}
+.form-title{font-family:'Playfair Display',serif;font-size:.86rem;font-weight:700;color:var(--accent);margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.fg{display:grid;gap:9px}
+.fg-2{grid-template-columns:1fr 1fr}
+.fg-3{grid-template-columns:1fr 1fr 1fr}
+.fg-4{grid-template-columns:1fr 1fr 1fr 1fr}
+.fr{display:flex;gap:9px;flex-wrap:wrap;align-items:flex-end}
+.ff{display:flex;flex-direction:column;gap:3px;flex:1;min-width:100px}
+.ff.wide{min-width:160px;flex:2}
+.flabel{font-size:.61rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--muted)}
+.flabel .req{color:var(--red);margin-left:2px}
+.fi,.fs{background:var(--card);border:1.5px solid var(--border);border-radius:var(--rx);padding:7px 9px;font-size:.8rem;font-weight:500;color:var(--text);width:100%;transition:border-color var(--t),box-shadow var(--t)}
+.fs{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='9' height='5'%3E%3Cpath d='M0 0l4.5 5 4.5-5z' fill='%23a45c40'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center;padding-right:24px}
+.fi:focus,.fs:focus{outline:none;border-color:var(--accent2);box-shadow:0 0 0 2.5px rgba(164,92,64,.1)}
+.fi.err{border-color:var(--red);box-shadow:0 0 0 2.5px rgba(192,57,43,.1)}
+.fi[readonly]{background:var(--bg);color:var(--muted);cursor:default}
+.form-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:3px}
+
+/* ══ TOAST ══ */
+.toast-wrap{position:fixed;bottom:20px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:7px;pointer-events:none}
+.toast{background:var(--dark);color:#fff;padding:10px 14px;border-radius:var(--rs);font-size:.76rem;font-weight:500;box-shadow:0 8px 32px rgba(0,0,0,.25);display:flex;align-items:center;gap:8px;pointer-events:auto;min-width:230px;border-left:3px solid var(--accent2);animation:su .25s ease}
+.toast.success{border-left-color:var(--green)} .toast.error{border-left-color:var(--red)} .toast.info{border-left-color:#4a90d9}
+.tc{opacity:.5;cursor:pointer;margin-left:auto}
+.tc:hover{opacity:1}
+@keyframes su{from{transform:translateY(12px);opacity:0}to{transform:translateY(0);opacity:1}}
+
+/* ══ DATA TABLE ══ */
+.tbl-wrap{overflow-x:auto}
+.dtbl{width:100%;border-collapse:collapse}
+.dtbl th{background:var(--bg);padding:8px 11px;font-size:.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);text-align:left;border-bottom:1.5px solid var(--border);white-space:nowrap}
+.dtbl td{padding:8px 11px;font-size:.78rem;border-bottom:1px solid rgba(236,220,204,.45);color:var(--text);vertical-align:middle}
+.dtbl tr:last-child td{border-bottom:none}
+.dtbl tr:hover td{background:rgba(228,183,160,.07)}
+.mono{font-family:'DM Mono',monospace;font-size:.74rem}
+.amt{font-weight:600;font-family:'DM Mono',monospace}
+.amt.pos{color:var(--green)} .amt.neg{color:var(--red)}
+.acts{display:flex;gap:4px;white-space:nowrap}
+.badge{display:inline-flex;align-items:center;padding:2px 6px;border-radius:20px;font-size:.6rem;font-weight:700}
+.b-buy{background:var(--bbg);color:var(--blue)} .b-sell{background:var(--gbg);color:var(--green)} .b-exp{background:var(--obg);color:var(--orange)}
+.empty-td{padding:32px;text-align:center;color:var(--muted);font-size:.8rem}
+
+/* ══ TAX ══ */
+.tax-block{background:var(--card);border:1.5px solid var(--border);border-radius:var(--r);box-shadow:var(--sh);margin-bottom:16px;overflow:hidden}
+.tax-head{padding:11px 18px;background:var(--bg);border-bottom:1.5px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.tax-head-title{font-family:'Playfair Display',serif;font-size:.88rem;font-weight:700;color:var(--text);display:flex;align-items:center;gap:8px}
+.tax-total-row td{font-weight:700;background:var(--bg)!important}
+
+/* ══ MINI CARDS ══ */
+.mini-row{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px}
+.mini-card{background:var(--card);border:1.5px solid var(--border);border-radius:var(--r);padding:13px 15px;box-shadow:var(--sh)}
+.mini-head{font-size:.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);margin-bottom:10px}
+.mini-stat{display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid rgba(236,220,204,.35);font-size:.76rem}
+.mini-stat:last-child{border-bottom:none}
+.mini-val{font-weight:600;font-family:'DM Mono',monospace;font-size:.73rem}
+
+/* ══ ADMIN ══ */
+.admin-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px}
+.admin-card{background:var(--card);border:1.5px solid var(--border);border-radius:var(--r);overflow:hidden;box-shadow:var(--sh)}
+.admin-card.span2{grid-column:span 2}
+.admin-head{padding:10px 14px;background:linear-gradient(135deg,rgba(164,92,64,.07),rgba(228,183,160,.12));border-bottom:1.5px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.admin-head-title{font-family:'Playfair Display',serif;font-size:.8rem;font-weight:700;color:var(--text)}
+.a-list{padding:8px 10px;min-height:60px;max-height:170px;overflow-y:auto}
+.a-item{display:flex;align-items:center;justify-content:space-between;padding:6px 8px;border-radius:var(--rx);margin-bottom:2px;transition:background var(--t);border:1px solid transparent}
+.a-item:hover{background:var(--bg);border-color:var(--border)}
+.a-name{display:flex;align-items:center;gap:6px;font-size:.78rem;font-weight:500}
+.dot{width:6px;height:6px;border-radius:50%;background:var(--accent2)}
+.a-btns{display:flex;gap:3px}
+.a-add{padding:8px 10px;border-top:1px dashed var(--border);display:flex;gap:6px}
+.a-add .fi{flex:1}
+.a-empty{padding:14px;text-align:center;color:var(--muted);font-size:.72rem}
+.url-box{padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+.url-hint{font-size:.72rem;color:var(--muted);line-height:1.55}
+.url-btns{display:flex;gap:7px;align-items:center;flex-wrap:wrap}
+.notice{background:linear-gradient(135deg,rgba(164,92,64,.07),rgba(228,183,160,.09));border:1.5px solid var(--border);border-radius:var(--r);padding:10px 14px;margin-bottom:14px;font-size:.75rem;color:#6b3520;line-height:1.6}
+
+/* ══ INLINE EDIT ══ */
+.ie{background:var(--card);border:1.5px solid var(--accent2);border-radius:var(--rx);padding:3px 7px;font-size:.76rem;font-family:'DM Sans',sans-serif;outline:none}
+
+/* ══ LOADER ══ */
+.loader-overlay{position:fixed;inset:0;background:rgba(246,238,224,.9);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9998;transition:opacity .3s}
+.loader-overlay.gone{opacity:0;pointer-events:none}
+.spin{width:44px;height:44px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:rot .7s linear infinite;margin-bottom:10px}
+@keyframes rot{to{transform:rotate(360deg)}}
+.spin-txt{color:#6b3520;font-weight:500;font-size:.82rem}
+
+/* ══════════════════════════
+   RESPONSIVE BREAKPOINTS
+══════════════════════════ */
+@media(max-width:1200px){
+  .kpi-grid{grid-template-columns:repeat(2,1fr)}
+  .admin-grid{grid-template-columns:1fr 1fr}
+  .admin-card.span2{grid-column:span 2}
+}
+@media(max-width:1000px){
+  .chart-row,.chart-row-2{grid-template-columns:1fr}
+  .mini-row{grid-template-columns:1fr}
+}
+@media(max-width:860px){
+  /* ── HIDE DESKTOP SIDEBAR ── */
+  .sidebar{display:none!important}
+  /* ── SHOW BOTTOM NAV ── */
+  .bottom-nav{display:block}
+  /* ── REMOVE SIDEBAR MARGIN ── */
+  .main{margin-left:0}
+  /* ── EXTRA BOTTOM PADDING FOR BOTTOM NAV ── */
+  .content{padding-bottom:76px}
+  .admin-grid{grid-template-columns:1fr 1fr}
+  .fg-4,.fg-3{grid-template-columns:1fr 1fr}
+  .topbar{padding:9px 14px}
+}
+@media(max-width:600px){
+  .kpi-grid{grid-template-columns:1fr}
+  .admin-grid{grid-template-columns:1fr}
+  .admin-card.span2{grid-column:span 1}
+  .fg-4,.fg-3,.fg-2{grid-template-columns:1fr}
+  .content{padding:12px 10px 76px}
+  .tx-tab{padding:8px 12px;font-size:.72rem}
+  .flt-sel{min-width:60px;font-size:.72rem}
+}
+</style>
+</head>
+<body>
+
+<!-- LOADER -->
+<div class="loader-overlay" id="loader">
+  <div class="spin"></div>
+  <div class="spin-txt">Loading ALFYNX dashboard…</div>
+</div>
+
+<!-- TOASTS -->
+<div class="toast-wrap" id="toasts"></div>
+
+<div class="app">
+
+<!-- ══════════════ DESKTOP SIDEBAR ══════════════ -->
+<aside class="sidebar">
+  <div class="logo-area">
+    <div class="logo-row">
+      <div class="logo-icon">₿</div>
+      <div>
+        <div class="logo-name">ALFYNX<br>TECHNOLOGIES</div>
+        <span class="logo-sub">P2P Trading</span>
+      </div>
+    </div>
+    <div class="logo-tag">v2.1 · CA Ready · GST Compliant</div>
+  </div>
+  <div class="nav-section-label">Navigation</div>
+  <nav class="nav-links">
+    <div class="nav-link active" onclick="go('overview')"><span class="nav-icon">📊</span><span>Overview</span></div>
+    <div class="nav-link" onclick="go('transactions')"><span class="nav-icon">📋</span><span>Transactions</span><span class="nav-badge" id="nb-tx">0</span></div>
+    <div class="nav-link" onclick="go('tax')"><span class="nav-icon">🧾</span><span>Tax Report</span></div>
+    <div class="nav-link" onclick="go('ledger')"><span class="nav-icon">📒</span><span>Ledger</span></div>
+    <div class="nav-link" onclick="go('admin')"><span class="nav-icon">⚙️</span><span>Admin Panel</span></div>
+  </nav>
+  <div class="sidebar-foot"><div class="sidebar-foot-text">ALFYNX TECHNOLOGIES © 2025</div></div>
+</aside>
+
+<!-- ══════════════ MOBILE BOTTOM NAV ══════════════ -->
+<nav class="bottom-nav" id="bottom-nav">
+  <div class="bn-items">
+    <div class="bn-item active" onclick="go('overview')"><span class="bn-icon">📊</span><span>Overview</span></div>
+    <div class="bn-item" onclick="go('transactions')"><span class="bn-icon">📋</span><span>Trades</span></div>
+    <div class="bn-item" onclick="go('tax')"><span class="bn-icon">🧾</span><span>Tax</span></div>
+    <div class="bn-item" onclick="go('ledger')"><span class="bn-icon">📒</span><span>Ledger</span></div>
+    <div class="bn-item" onclick="go('admin')"><span class="bn-icon">⚙️</span><span>Admin</span></div>
+  </div>
+</nav>
+
+<!-- ══════════════ MAIN ══════════════ -->
+<div class="main">
+
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <div class="topbar-title">Dashboard<small id="date-lbl">Demo data loaded</small></div>
+    <div class="flt-grp">
+      <span class="flt-label">View</span>
+      <select class="flt-sel" id="f-view" onchange="onFlt()">
+        <option value="Yearly">Yearly</option><option value="Monthly" selected>Monthly</option><option value="Daily">Daily</option>
+      </select>
+      <span class="flt-label">Year</span>
+      <select class="flt-sel" id="f-year" onchange="onFlt()"></select>
+      <span class="flt-label" id="lbl-m">Month</span>
+      <select class="flt-sel" id="f-month" onchange="onFlt()">
+        <option value="1">Jan</option><option value="2">Feb</option><option value="3">Mar</option><option value="4">Apr</option><option value="5">May</option><option value="6">Jun</option><option value="7">Jul</option><option value="8">Aug</option><option value="9">Sep</option><option value="10">Oct</option><option value="11">Nov</option><option value="12">Dec</option>
+      </select>
+      <span class="flt-label" id="lbl-d" style="display:none">Day</span>
+      <select class="flt-sel" id="f-day" style="display:none" onchange="onFlt()"></select>
+    </div>
+    <button class="btn btn-primary" onclick="loadData()">↻ Refresh</button>
+  </div>
+
+  <!-- ─── OVERVIEW ─── -->
+  <div class="content section active" id="s-overview">
+    <div class="kpi-grid">
+      <div class="kpi-card k-buy"><div class="kpi-icon">💸</div><div class="kpi-label">Total Buy</div><div class="kpi-value" id="kv-buy">₹0.00</div><div class="kpi-sub" id="ks-buy">0 orders</div></div>
+      <div class="kpi-card k-sell"><div class="kpi-icon">💰</div><div class="kpi-label">Total Sell</div><div class="kpi-value" id="kv-sell">₹0.00</div><div class="kpi-sub" id="ks-sell">0 orders</div></div>
+      <div class="kpi-card k-exp"><div class="kpi-icon">🧾</div><div class="kpi-label">Expenses</div><div class="kpi-value" id="kv-exp">₹0.00</div><div class="kpi-sub" id="ks-exp">0 entries</div></div>
+      <div class="kpi-card k-profit"><div class="kpi-icon">📈</div><div class="kpi-label">Net Profit</div><div class="kpi-value" id="kv-profit">₹0.00</div><div class="kpi-sub" id="ks-profit">ROI: 0%</div></div>
+    </div>
+    <div class="chart-row">
+      <div class="chart-card"><div class="chart-head"><span class="chart-title">Buy vs Sell Trend</span><span class="chart-badge" id="trend-lbl">Monthly</span></div><div class="chart-box tall"><canvas id="cLine"></canvas></div></div>
+      <div class="chart-card"><div class="chart-head"><span class="chart-title">Payment Methods</span><span class="chart-badge">Split</span></div><div class="chart-box"><canvas id="cPie"></canvas></div></div>
+    </div>
+    <div class="chart-row-2">
+      <div class="chart-card"><div class="chart-head"><span class="chart-title">Bank-wise Volume</span><span class="chart-badge">Buy & Sell</span></div><div class="chart-box"><canvas id="cBar"></canvas></div></div>
+      <div class="chart-card"><div class="chart-head"><span class="chart-title">Profit Trend</span><span class="chart-badge">Net P&L</span></div><div class="chart-box"><canvas id="cProfit"></canvas></div></div>
+    </div>
+    <div class="mini-row">
+      <div class="mini-card"><div class="mini-head">🪙 Asset Breakdown — Buy</div><div id="ab-buy"></div></div>
+      <div class="mini-card"><div class="mini-head">🪙 Asset Breakdown — Sell</div><div id="ab-sell"></div></div>
+      <div class="mini-card"><div class="mini-head">⚡ Quick Summary</div><div id="qs"></div></div>
+    </div>
+  </div>
+
+  <!-- ─── TRANSACTIONS ─── -->
+  <div class="content section" id="s-transactions">
+    <div class="sec-hd"><div class="sec-title">Transactions</div></div>
+    <div class="tx-wrap">
+      <div class="tx-tabs">
+        <button class="tx-tab active" onclick="txTab('buy',this)">💸 Buy Orders</button>
+        <button class="tx-tab" onclick="txTab('sell',this)">💰 Sell Orders</button>
+        <button class="tx-tab" onclick="txTab('expenses',this)">🧾 Expenses</button>
+      </div>
+
+      <!-- BUY PANE -->
+      <div class="tx-pane active" id="tp-buy">
+        <div style="padding:11px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:flex-end">
+          <button class="btn btn-primary btn-sm" onclick="tog('af-buy')">➕ Add Buy Order</button>
+        </div>
+        <div class="add-bar" id="af-buy">
+          <div class="add-inner">
+            <div class="form-title">➕ New Buy Transaction</div>
+            <div class="fg fg-4" style="margin-bottom:9px">
+              <div class="ff"><label class="flabel">Date <span class="req">*</span></label><input type="date" class="fi" id="b-date"/></div>
+              <div class="ff"><label class="flabel">Asset <span class="req">*</span></label><select class="fs" id="b-asset"></select></div>
+              <div class="ff"><label class="flabel">Quantity <span class="req">*</span></label><input type="number" class="fi" id="b-qty" placeholder="0.00" step="any" oninput="calcB()"/></div>
+              <div class="ff"><label class="flabel">Fees</label><input type="number" class="fi" id="b-fees" placeholder="0.00" step="any" oninput="calcB()"/></div>
+              <div class="ff"><label class="flabel">Net Qty (auto)</label><input type="number" class="fi" id="b-nqty" readonly placeholder="Auto"/></div>
+              <div class="ff"><label class="flabel">Price/Unit <span class="req">*</span></label><input type="number" class="fi" id="b-price" placeholder="₹0" step="any" oninput="calcB()"/></div>
+              <div class="ff"><label class="flabel">Amt Paid (auto)</label><input type="number" class="fi" id="b-amt" readonly placeholder="Auto"/></div>
+              <div class="ff"><label class="flabel">Bank <span class="req">*</span></label><select class="fs" id="b-bank"></select></div>
+              <div class="ff"><label class="flabel">Pymt Method</label><select class="fs" id="b-pm"></select></div>
+              <div class="ff"><label class="flabel">P2P ID</label><input type="text" class="fi" id="b-p2p" placeholder="P2PXXXX"/></div>
+              <div class="ff"><label class="flabel">UTR / Ref</label><input type="text" class="fi" id="b-utr" placeholder="UTRXXXXX"/></div>
+            </div>
+            <div class="form-actions">
+              <button class="btn btn-primary" onclick="save('buy')">✔ Save Buy Order</button>
+              <button class="btn btn-ghost" onclick="tog('af-buy');clr('buy')">✕ Cancel</button>
+              <span id="msg-buy" style="font-size:.74rem;color:var(--muted)"></span>
+            </div>
+          </div>
+        </div>
+        <div class="tbl-wrap"><table class="dtbl">
+          <thead><tr><th>#</th><th>Date</th><th>Asset</th><th>Qty</th><th>Fees</th><th>Net Qty</th><th>Price</th><th>Amt Paid</th><th>Bank</th><th>Method</th><th>P2P ID</th><th>UTR</th><th>Actions</th></tr></thead>
+          <tbody id="tb-buy"><tr><td colspan="13" class="empty-td">💸 No buy orders yet</td></tr></tbody>
+        </table></div>
+      </div>
+
+      <!-- SELL PANE -->
+      <div class="tx-pane" id="tp-sell">
+        <div style="padding:11px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:flex-end">
+          <button class="btn btn-primary btn-sm" onclick="tog('af-sell')">➕ Add Sell Order</button>
+        </div>
+        <div class="add-bar" id="af-sell">
+          <div class="add-inner">
+            <div class="form-title">➕ New Sell Transaction</div>
+            <div class="fg fg-4" style="margin-bottom:9px">
+              <div class="ff"><label class="flabel">Date <span class="req">*</span></label><input type="date" class="fi" id="s-date"/></div>
+              <div class="ff"><label class="flabel">Asset <span class="req">*</span></label><select class="fs" id="s-asset"></select></div>
+              <div class="ff"><label class="flabel">Quantity <span class="req">*</span></label><input type="number" class="fi" id="s-qty" placeholder="0.00" step="any" oninput="calcS()"/></div>
+              <div class="ff"><label class="flabel">Fees</label><input type="number" class="fi" id="s-fees" placeholder="0.00" step="any" oninput="calcS()"/></div>
+              <div class="ff"><label class="flabel">Net Qty (auto)</label><input type="number" class="fi" id="s-nqty" readonly placeholder="Auto"/></div>
+              <div class="ff"><label class="flabel">Price/Unit <span class="req">*</span></label><input type="number" class="fi" id="s-price" placeholder="₹0" step="any" oninput="calcS()"/></div>
+              <div class="ff"><label class="flabel">Amt Received (auto)</label><input type="number" class="fi" id="s-amt" readonly placeholder="Auto"/></div>
+              <div class="ff"><label class="flabel">Bank <span class="req">*</span></label><select class="fs" id="s-bank"></select></div>
+              <div class="ff"><label class="flabel">Pymt Method</label><select class="fs" id="s-pm"></select></div>
+              <div class="ff"><label class="flabel">P2P ID</label><input type="text" class="fi" id="s-p2p" placeholder="P2PXXXX"/></div>
+              <div class="ff"><label class="flabel">UTR / Ref</label><input type="text" class="fi" id="s-utr" placeholder="UTRXXXXX"/></div>
+            </div>
+            <div class="form-actions">
+              <button class="btn btn-primary" onclick="save('sell')">✔ Save Sell Order</button>
+              <button class="btn btn-ghost" onclick="tog('af-sell');clr('sell')">✕ Cancel</button>
+              <span id="msg-sell" style="font-size:.74rem;color:var(--muted)"></span>
+            </div>
+          </div>
+        </div>
+        <div class="tbl-wrap"><table class="dtbl">
+          <thead><tr><th>#</th><th>Date</th><th>Asset</th><th>Qty</th><th>Fees</th><th>Net Qty</th><th>Price</th><th>Amt Received</th><th>Bank</th><th>Method</th><th>P2P ID</th><th>UTR</th><th>Actions</th></tr></thead>
+          <tbody id="tb-sell"><tr><td colspan="13" class="empty-td">💰 No sell orders yet</td></tr></tbody>
+        </table></div>
+      </div>
+
+      <!-- EXPENSES PANE -->
+      <div class="tx-pane" id="tp-expenses">
+        <div style="padding:11px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:flex-end">
+          <button class="btn btn-primary btn-sm" onclick="tog('af-exp')">➕ Add Expense</button>
+        </div>
+        <div class="add-bar" id="af-exp">
+          <div class="add-inner">
+            <div class="form-title">➕ New Expense Entry</div>
+            <div class="fr" style="margin-bottom:9px">
+              <div class="ff"><label class="flabel">Date <span class="req">*</span></label><input type="date" class="fi" id="e-date"/></div>
+              <div class="ff"><label class="flabel">Category <span class="req">*</span></label><select class="fs" id="e-cat"></select></div>
+              <div class="ff"><label class="flabel">Amount ₹ <span class="req">*</span></label><input type="number" class="fi" id="e-amt" placeholder="0.00" step="any"/></div>
+              <div class="ff wide"><label class="flabel">Notes</label><input type="text" class="fi" id="e-notes" placeholder="Optional…"/></div>
+            </div>
+            <div class="form-actions">
+              <button class="btn btn-primary" onclick="save('expenses')">✔ Save Expense</button>
+              <button class="btn btn-ghost" onclick="tog('af-exp');clr('expenses')">✕ Cancel</button>
+              <span id="msg-exp" style="font-size:.74rem;color:var(--muted)"></span>
+            </div>
+          </div>
+        </div>
+        <div class="tbl-wrap"><table class="dtbl">
+          <thead><tr><th>#</th><th>Date</th><th>Category</th><th>Amount</th><th>Notes</th><th>Actions</th></tr></thead>
+          <tbody id="tb-exp"><tr><td colspan="6" class="empty-td">🧾 No expenses yet</td></tr></tbody>
+        </table></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── TAX REPORT ─── -->
+  <div class="content section" id="s-tax">
+    <div class="sec-hd"><div class="sec-title">Tax Report</div><button class="btn btn-ghost btn-sm" onclick="window.print()">🖨 Print / PDF</button></div>
+    <div class="tax-block">
+      <div class="tax-head"><div class="tax-head-title"><span class="badge b-buy">SECTION 1</span> Buy Register</div><span id="tc-buy" style="font-size:.72rem;color:var(--muted)">0 records</span></div>
+      <div class="tbl-wrap"><table class="dtbl"><thead><tr><th>Date</th><th>Asset</th><th>Qty</th><th>Fees</th><th>Net Qty</th><th>Price</th><th>Amt Paid</th><th>Bank</th><th>Method</th><th>P2P ID</th><th>UTR</th></tr></thead><tbody id="tax-buy"></tbody><tfoot><tr class="tax-total-row"><td colspan="6"><strong>TOTAL BUY</strong></td><td colspan="5"><strong id="tt-buy">₹0.00</strong></td></tr></tfoot></table></div>
+    </div>
+    <div class="tax-block">
+      <div class="tax-head"><div class="tax-head-title"><span class="badge b-sell">SECTION 2</span> Sell Register</div><span id="tc-sell" style="font-size:.72rem;color:var(--muted)">0 records</span></div>
+      <div class="tbl-wrap"><table class="dtbl"><thead><tr><th>Date</th><th>Asset</th><th>Qty</th><th>Fees</th><th>Net Qty</th><th>Price</th><th>Amt Received</th><th>Bank</th><th>Method</th><th>P2P ID</th><th>UTR</th></tr></thead><tbody id="tax-sell"></tbody><tfoot><tr class="tax-total-row"><td colspan="6"><strong>TOTAL SELL</strong></td><td colspan="5"><strong id="tt-sell">₹0.00</strong></td></tr></tfoot></table></div>
+    </div>
+    <div class="tax-block">
+      <div class="tax-head"><div class="tax-head-title"><span class="badge b-exp">SECTION 3</span> Expense Register</div><span id="tc-exp" style="font-size:.72rem;color:var(--muted)">0 records</span></div>
+      <div class="tbl-wrap"><table class="dtbl"><thead><tr><th>Date</th><th>Category</th><th>Amount</th><th>Notes</th></tr></thead><tbody id="tax-exp"></tbody><tfoot><tr class="tax-total-row"><td colspan="2"><strong>TOTAL EXP</strong></td><td colspan="2"><strong id="tt-exp">₹0.00</strong></td></tr></tfoot></table></div>
+    </div>
+    <div class="tax-block">
+      <div class="tax-head"><div class="tax-head-title">📊 Section 4 — Profit Summary</div></div>
+      <table class="dtbl"><tbody>
+        <tr><td style="font-weight:600">Total Buy (Cost of Acquisition)</td><td class="amt" id="ps-buy">₹0.00</td></tr>
+        <tr><td style="font-weight:600">Total Sell (Sale Consideration)</td><td class="amt pos" id="ps-sell">₹0.00</td></tr>
+        <tr><td style="font-weight:600">Total Expenses (Deductible)</td><td class="amt neg" id="ps-exp">₹0.00</td></tr>
+        <tr style="background:var(--bg)"><td style="font-size:.9rem;font-weight:700">Net Profit / (Loss)</td><td class="amt" id="ps-profit" style="font-size:.9rem;font-weight:700">₹0.00</td></tr>
+      </tbody></table>
+    </div>
+  </div>
+
+  <!-- ─── LEDGER ─── -->
+  <div class="content section" id="s-ledger">
+    <div class="sec-hd"><div class="sec-title">Combined Ledger</div></div>
+    <div class="tx-wrap"><div class="tbl-wrap">
+      <table class="dtbl"><thead><tr><th>#</th><th>Date</th><th>Type</th><th>Asset / Cat.</th><th>Amount</th><th>Fees</th><th>Net Qty</th><th>Bank / Notes</th></tr></thead>
+      <tbody id="tb-ledger"><tr><td colspan="8" class="empty-td">📒 No data</td></tr></tbody></table>
+    </div></div>
+  </div>
+
+  <!-- ─── ADMIN ─── -->
+  <div class="content section" id="s-admin">
+    <div class="sec-hd"><div class="sec-title">⚙️ Admin Panel</div></div>
+    <div class="notice">⚠️ Changes update your <strong>local config & form dropdowns</strong> instantly. Click <strong>Sync to Sheet</strong> to persist in Google Sheets.</div>
+    <div class="admin-grid">
+      <div class="admin-card">
+        <div class="admin-head"><span class="admin-head-title">🪙 Assets</span><span id="cnt-assets" style="font-size:.66rem;color:var(--muted)">0</span></div>
+        <div class="a-list" id="al-assets"></div>
+        <div class="a-add"><input type="text" class="fi" id="na-assets" placeholder="e.g. SOL, MATIC" onkeydown="if(event.key==='Enter')addItem('assets')"/><button class="btn btn-success btn-sm" onclick="addItem('assets')">+ Add</button></div>
+      </div>
+      <div class="admin-card">
+        <div class="admin-head"><span class="admin-head-title">🏦 Banks</span><span id="cnt-banks" style="font-size:.66rem;color:var(--muted)">0</span></div>
+        <div class="a-list" id="al-banks"></div>
+        <div class="a-add"><input type="text" class="fi" id="na-banks" placeholder="e.g. KOTAK, YES" onkeydown="if(event.key==='Enter')addItem('banks')"/><button class="btn btn-success btn-sm" onclick="addItem('banks')">+ Add</button></div>
+      </div>
+      <div class="admin-card">
+        <div class="admin-head"><span class="admin-head-title">💳 Payment Methods</span><span id="cnt-pm" style="font-size:.66rem;color:var(--muted)">0</span></div>
+        <div class="a-list" id="al-pm"></div>
+        <div class="a-add"><input type="text" class="fi" id="na-pm" placeholder="e.g. RTGS, SWIFT" onkeydown="if(event.key==='Enter')addItem('pm')"/><button class="btn btn-success btn-sm" onclick="addItem('pm')">+ Add</button></div>
+      </div>
+      <div class="admin-card">
+        <div class="admin-head"><span class="admin-head-title">📂 Expense Categories</span><span id="cnt-cats" style="font-size:.66rem;color:var(--muted)">0</span></div>
+        <div class="a-list" id="al-cats"></div>
+        <div class="a-add"><input type="text" class="fi" id="na-cats" placeholder="e.g. Software, Rent" onkeydown="if(event.key==='Enter')addItem('cats')"/><button class="btn btn-success btn-sm" onclick="addItem('cats')">+ Add</button></div>
+      </div>
+      <div class="admin-card span2">
+        <div class="admin-head"><span class="admin-head-title">🔗 Google Apps Script Connection</span></div>
+        <div class="url-box">
+          <div class="url-hint">Paste your deployed <strong>Web App URL</strong> to connect the dashboard to Google Sheets for live read/write.</div>
+          <input type="url" class="fi" id="url-inp" placeholder="https://script.google.com/macros/s/…/exec"/>
+          <div class="url-btns">
+            <button class="btn btn-primary btn-sm" onclick="saveUrl()">💾 Save URL</button>
+            <button class="btn btn-ghost btn-sm" onclick="testUrl()">🔍 Test Connection</button>
+            <span id="url-msg" style="font-size:.72rem"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;gap:9px;flex-wrap:wrap">
+      <button class="btn btn-primary" onclick="syncToSheet()">☁ Sync Config to Google Sheet</button>
+      <button class="btn btn-ghost" onclick="exportCfg()">📤 Export Config JSON</button>
+    </div>
+  </div>
+
+</div><!-- /main -->
+</div><!-- /app -->
+
+<script>
+// ═══════════════════════════
+// STATE
+// ═══════════════════════════
+let URL_GS = localStorage.getItem('alfynx_url') || '';
+let CFG = {assets:['USDT','BTC','ETH','BNB','SOL'],banks:['HDFC','AXIS','SBI','ICICI','KOTAK'],pm:['UPI','IMPS','NEFT'],cats:['Rent','Fees','Electricity','Internet','Misc']};
+try{const c=localStorage.getItem('alfynx_cfg');if(c)CFG=JSON.parse(c);}catch(e){}
+let D = {buys:[],sells:[],expenses:[],summary:{}};
+let CH = {};
+
+// ═══════════════════════════
+// BOOT
+// ═══════════════════════════
+window.addEventListener('DOMContentLoaded',()=>{
+  buildYearSel(); buildDaySel();
+  const now=new Date();
+  V('f-year').value=now.getFullYear();
+  V('f-month').value=now.getMonth()+1;
+  V('f-day').value=now.getDate();
+  syncFltVis(); fillDrops(); renderAdmin();
+  if(URL_GS) V('url-inp').value=URL_GS;
+  const today=now.toISOString().split('T')[0];
+  ['b-date','s-date','e-date'].forEach(id=>{const el=V(id);if(el)el.value=today;});
+  setTimeout(loadDemo,350);
+});
+function V(id){return document.getElementById(id)}
+function buildYearSel(){const s=V('f-year');for(let y=2024;y<=2035;y++){const o=document.createElement('option');o.value=y;o.textContent=y;if(y===new Date().getFullYear())o.selected=true;s.appendChild(o);}}
+function buildDaySel(){const s=V('f-day');for(let d=1;d<=31;d++){const o=document.createElement('option');o.value=d;o.textContent=d;s.appendChild(o);}}
+
+// ═══════════════════════════
+// FILLS
+// ═══════════════════════════
+function fillDrops(){
+  fillSel('b-asset',CFG.assets);fillSel('s-asset',CFG.assets);
+  fillSel('b-bank',CFG.banks);fillSel('s-bank',CFG.banks);
+  fillSel('b-pm',CFG.pm);fillSel('s-pm',CFG.pm);
+  fillSel('e-cat',CFG.cats);
+}
+function fillSel(id,items){const s=V(id);if(!s)return;const cur=s.value;s.innerHTML=items.map(i=>`<option value="${X(i)}">${X(i)}</option>`).join('');if(cur&&items.includes(cur))s.value=cur;}
+
+// ═══════════════════════════
+// FILTERS
+// ═══════════════════════════
+function onFlt(){syncFltVis();loadData();}
+function syncFltVis(){
+  const v=V('f-view').value;
+  ['lbl-m','f-month'].forEach(id=>V(id).style.display=v==='Yearly'?'none':'');
+  ['lbl-d','f-day'].forEach(id=>V(id).style.display=v==='Daily'?'':'none');
+}
+function getFlt(){return{year:+V('f-year').value,month:+V('f-month').value,day:+V('f-day').value,view:V('f-view').value};}
+
+// ═══════════════════════════
+// LOAD
+// ═══════════════════════════
+async function loadData(){
+  if(!URL_GS){loadDemo();return;}
+  loader(true);
+  try{
+    const r=await fetch(URL_GS,{method:'POST',body:JSON.stringify(getFlt()),headers:{'Content-Type':'application/json'}});
+    const d=await r.json(); D=d; paint(d);
+    toast('Refreshed from Google Sheets','success');
+  }catch(e){toast('Cannot reach Google Sheets — demo data shown','info');loadDemo();}
+  finally{loader(false);}
+}
+function loadDemo(){loader(false);const d=demo();D=d;paint(d);}
+function demo(){
+  const mo=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const bts=mo.map((_,i)=>({label:`2025-${String(i+1).padStart(2,'0')}`,value:80000+Math.random()*120000}));
+  const sts=mo.map((_,i)=>({label:`2025-${String(i+1).padStart(2,'0')}`,value:90000+Math.random()*140000}));
+  const buys=[
+    {date:'2025-01-05',asset:'USDT',qty:1000,fees:2,netQty:998,price:87.5,amount:87325,bank:'HDFC',pm:'UPI',p2pId:'P2P001',utr:'UTR001'},
+    {date:'2025-01-12',asset:'BTC',qty:.05,fees:.001,netQty:.049,price:3500000,amount:171500,bank:'AXIS',pm:'IMPS',p2pId:'P2P002',utr:'UTR002'},
+    {date:'2025-02-03',asset:'USDT',qty:2000,fees:3,netQty:1997,price:88,amount:175736,bank:'SBI',pm:'NEFT',p2pId:'P2P003',utr:'UTR003'},
+    {date:'2025-02-18',asset:'ETH',qty:1,fees:.005,netQty:.995,price:285000,amount:283575,bank:'HDFC',pm:'UPI',p2pId:'P2P004',utr:'UTR004'},
+    {date:'2025-03-07',asset:'USDT',qty:5000,fees:5,netQty:4995,price:87.8,amount:438561,bank:'ICICI',pm:'IMPS',p2pId:'P2P005',utr:'UTR005'},
+  ];
+  const sells=[
+    {date:'2025-01-08',asset:'USDT',qty:900,fees:1.5,netQty:898.5,price:88.2,amount:79249,bank:'HDFC',pm:'UPI',p2pId:'P2P101',utr:'UTR101'},
+    {date:'2025-01-20',asset:'BTC',qty:.04,fees:.001,netQty:.039,price:3600000,amount:140400,bank:'AXIS',pm:'IMPS',p2pId:'P2P102',utr:'UTR102'},
+    {date:'2025-02-10',asset:'USDT',qty:1800,fees:2,netQty:1798,price:89,amount:160022,bank:'SBI',pm:'NEFT',p2pId:'P2P103',utr:'UTR103'},
+    {date:'2025-03-15',asset:'ETH',qty:.9,fees:.004,netQty:.896,price:295000,amount:264320,bank:'HDFC',pm:'UPI',p2pId:'P2P104',utr:'UTR104'},
+    {date:'2025-03-28',asset:'USDT',qty:4500,fees:4,netQty:4496,price:88.5,amount:397896,bank:'ICICI',pm:'IMPS',p2pId:'P2P105',utr:'UTR105'},
+  ];
+  const expenses=[
+    {date:'2025-01-01',category:'Rent',amount:15000,notes:'Office rent Jan'},
+    {date:'2025-01-05',category:'Electricity',amount:2500,notes:'Jan bill'},
+    {date:'2025-02-01',category:'Rent',amount:15000,notes:'Office rent Feb'},
+    {date:'2025-02-10',category:'Fees',amount:1200,notes:'Platform fees'},
+    {date:'2025-03-01',category:'Rent',amount:15000,notes:'Office rent Mar'},
+    {date:'2025-03-15',category:'Internet',amount:999,notes:'Monthly internet'},
+    {date:'2025-03-20',category:'Misc',amount:3500,notes:'Misc expenses'},
+  ];
+  const tB=buys.reduce((s,r)=>s+r.amount,0),tS=sells.reduce((s,r)=>s+r.amount,0),tE=expenses.reduce((s,r)=>s+r.amount,0);
+  return{summary:{totalBuy:tB,totalSell:tS,totalExpenses:tE,netProfit:tS-tB-tE},
+    timeSeries:{buy:bts,sell:sts},
+    bankBreakdown:[{bank:'HDFC',buy:87325+283575,sell:79249+264320},{bank:'AXIS',buy:171500,sell:140400},{bank:'SBI',buy:175736,sell:160022},{bank:'ICICI',buy:438561,sell:397896}],
+    pmBreakdown:[{method:'UPI',amount:87325+283575+79249+264320},{method:'IMPS',amount:171500+438561+140400+397896},{method:'NEFT',amount:175736+160022}],
+    buys,sells,expenses,meta:{startDate:'2025-01-01',endDate:'2025-03-31'}};
+}
+
+// ═══════════════════════════
+// PAINT
+// ═══════════════════════════
+function paint(d){
+  paintKPIs(d); paintCharts(d); paintTables(d); paintTax(d); paintLedger(d); paintMini(d);
+  V('date-lbl').textContent=`${d.meta?.startDate||'—'} → ${d.meta?.endDate||'—'}`;
+  V('nb-tx').textContent=d.buys.length+d.sells.length+d.expenses.length;
+}
+function paintKPIs(d){
+  const s=d.summary;
+  V('kv-buy').textContent=fmt(s.totalBuy); V('kv-sell').textContent=fmt(s.totalSell); V('kv-exp').textContent=fmt(s.totalExpenses);
+  const pe=V('kv-profit'); pe.textContent=fmt(s.netProfit); pe.className='kpi-value '+(s.netProfit>=0?'pos':'neg');
+  V('ks-buy').textContent=`${d.buys.length} orders`; V('ks-sell').textContent=`${d.sells.length} orders`; V('ks-exp').textContent=`${d.expenses.length} entries`;
+  const roi=s.totalBuy>0?((s.netProfit/s.totalBuy)*100).toFixed(1):0;
+  V('ks-profit').textContent=`ROI: ${roi}%`;
+}
+
+// ═══════════════════════════
+// CHARTS
+// ═══════════════════════════
+const CP={b:'#4a90d9',ba:'rgba(74,144,217,.12)',s:'#2d7a4f',sa:'rgba(45,122,79,.12)',pie:['#a45c40','#4a90d9','#2d7a4f','#e67e22','#9b59b6','#1abc9c']};
+function mk(id,cfg){if(CH[id])CH[id].destroy();CH[id]=new Chart(V(id).getContext('2d'),cfg);}
+function copts(){return{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{labels:{font:{family:'DM Sans,sans-serif',size:11},color:'#7a4028',padding:10}},tooltip:{callbacks:{label:c=>` ${c.dataset.label}: ${fmt(c.raw||0)}`}}},scales:{x:{grid:{display:false},ticks:{font:{family:'DM Sans',size:10},color:'#9e7460'}},y:{grid:{color:'rgba(236,220,204,.45)'},ticks:{font:{family:'DM Sans',size:10},color:'#9e7460',callback:v=>fmtS(v)}}}};}
+function paintCharts(d){
+  V('trend-lbl').textContent=getFlt().view;
+  const ts=d.timeSeries,labels=[...new Set([...ts.buy.map(r=>r.label),...ts.sell.map(r=>r.label)])].sort();
+  const bm=Object.fromEntries(ts.buy.map(r=>[r.label,r.value])),sm=Object.fromEntries(ts.sell.map(r=>[r.label,r.value]));
+  mk('cLine',{type:'line',data:{labels,datasets:[{label:'Buy',data:labels.map(l=>bm[l]||0),borderColor:CP.b,backgroundColor:CP.ba,fill:true,tension:.4,pointRadius:4,pointHoverRadius:7},{label:'Sell',data:labels.map(l=>sm[l]||0),borderColor:CP.s,backgroundColor:CP.sa,fill:true,tension:.4,pointRadius:4,pointHoverRadius:7}]},options:copts()});
+  if(d.pmBreakdown?.length) mk('cPie',{type:'doughnut',data:{labels:d.pmBreakdown.map(p=>p.method),datasets:[{data:d.pmBreakdown.map(p=>p.amount),backgroundColor:CP.pie,borderWidth:0,hoverOffset:6}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{family:'DM Sans',size:11},color:'#7a4028',padding:10}},tooltip:{callbacks:{label:c=>` ${c.label}: ${fmt(c.raw)}`}}},cutout:'60%'}});
+  if(d.bankBreakdown?.length) mk('cBar',{type:'bar',data:{labels:d.bankBreakdown.map(b=>b.bank),datasets:[{label:'Buy',data:d.bankBreakdown.map(b=>b.buy),backgroundColor:CP.b,borderRadius:4,maxBarThickness:22},{label:'Sell',data:d.bankBreakdown.map(b=>b.sell),backgroundColor:CP.s,borderRadius:4,maxBarThickness:22}]},options:copts()});
+  const profits=labels.map(l=>(sm[l]||0)-(bm[l]||0));
+  mk('cProfit',{type:'bar',data:{labels,datasets:[{label:'Net Profit',data:profits,backgroundColor:profits.map(v=>v>=0?'rgba(45,122,79,.7)':'rgba(192,57,43,.7)'),borderRadius:4,maxBarThickness:26}]},options:copts()});
+}
+
+// ═══════════════════════════
+// TX TABLES
+// ═══════════════════════════
+function paintTables(d){
+  V('tb-buy').innerHTML=d.buys.length?d.buys.map((r,i)=>`<tr id="br-${i}"><td class="mono">${i+1}</td><td>${r.date}</td><td><b>${X(r.asset)}</b></td><td class="mono">${r.qty}</td><td class="mono">${r.fees}</td><td class="mono">${r.netQty}</td><td class="mono">${fmt(r.price)}</td><td class="amt">${fmt(r.amount)}</td><td>${X(r.bank)}</td><td>${X(r.pm)}</td><td class="mono">${X(r.p2pId||'—')}</td><td class="mono">${X(r.utr||'—')}</td><td class="acts"><button class="btn btn-ghost btn-xs" onclick="editRow('buy',${i})">✏</button><button class="btn btn-danger btn-xs" onclick="delRow('buy',${i})">🗑</button></td></tr>`).join(''):'<tr><td colspan="13" class="empty-td">💸 No buy orders yet</td></tr>';
+  V('tb-sell').innerHTML=d.sells.length?d.sells.map((r,i)=>`<tr id="sr-${i}"><td class="mono">${i+1}</td><td>${r.date}</td><td><b>${X(r.asset)}</b></td><td class="mono">${r.qty}</td><td class="mono">${r.fees}</td><td class="mono">${r.netQty}</td><td class="mono">${fmt(r.price)}</td><td class="amt pos">${fmt(r.amount)}</td><td>${X(r.bank)}</td><td>${X(r.pm)}</td><td class="mono">${X(r.p2pId||'—')}</td><td class="mono">${X(r.utr||'—')}</td><td class="acts"><button class="btn btn-ghost btn-xs" onclick="editRow('sell',${i})">✏</button><button class="btn btn-danger btn-xs" onclick="delRow('sell',${i})">🗑</button></td></tr>`).join(''):'<tr><td colspan="13" class="empty-td">💰 No sell orders yet</td></tr>';
+  V('tb-exp').innerHTML=d.expenses.length?d.expenses.map((r,i)=>`<tr id="er-${i}"><td class="mono">${i+1}</td><td>${r.date}</td><td>${X(r.category)}</td><td class="amt neg">${fmt(r.amount)}</td><td>${X(r.notes||'—')}</td><td class="acts"><button class="btn btn-ghost btn-xs" onclick="editRow('expenses',${i})">✏</button><button class="btn btn-danger btn-xs" onclick="delRow('expenses',${i})">🗑</button></td></tr>`).join(''):'<tr><td colspan="6" class="empty-td">🧾 No expenses yet</td></tr>';
+}
+
+// ═══════════════════════════
+// FORM ACTIONS
+// ═══════════════════════════
+function tog(id){V(id).classList.toggle('open');}
+function clr(t){
+  const ids=t==='buy'?['b-qty','b-fees','b-nqty','b-price','b-amt','b-p2p','b-utr']:t==='sell'?['s-qty','s-fees','s-nqty','s-price','s-amt','s-p2p','s-utr']:['e-amt','e-notes'];
+  ids.forEach(id=>{const el=V(id);if(el){el.value='';el.classList.remove('err');}});
+}
+function calcB(){const q=+V('b-qty').value||0,f=+V('b-fees').value||0,p=+V('b-price').value||0,n=q-f;V('b-nqty').value=n>0?+n.toFixed(8):'';V('b-amt').value=n>0&&p>0?+(n*p).toFixed(2):'';}
+function calcS(){const q=+V('s-qty').value||0,f=+V('s-fees').value||0,p=+V('s-price').value||0,n=q-f;V('s-nqty').value=n>0?+n.toFixed(8):'';V('s-amt').value=n>0&&p>0?+(n*p).toFixed(2):'';}
+function chk(fields){let ok=true;fields.forEach(({id,fn})=>{const el=V(id);const v=el?.value?.trim();const bad=fn?!fn(v):!v;if(bad){el?.classList.add('err');ok=false;}else el?.classList.remove('err');});return ok;}
+
+async function save(t){
+  let rec,ok;
+  if(t==='buy'){
+    ok=chk([{id:'b-date'},{id:'b-asset'},{id:'b-bank'},{id:'b-qty',fn:v=>v&&+v>0},{id:'b-price',fn:v=>v&&+v>0}]);
+    if(!ok){toast('Fill all required fields','error');return;}
+    rec={date:V('b-date').value,asset:V('b-asset').value,qty:+V('b-qty').value,fees:+V('b-fees').value||0,netQty:+V('b-nqty').value||0,price:+V('b-price').value,amount:+V('b-amt').value||0,bank:V('b-bank').value,pm:V('b-pm').value,p2pId:V('b-p2p').value,utr:V('b-utr').value};
+  }else if(t==='sell'){
+    ok=chk([{id:'s-date'},{id:'s-asset'},{id:'s-bank'},{id:'s-qty',fn:v=>v&&+v>0},{id:'s-price',fn:v=>v&&+v>0}]);
+    if(!ok){toast('Fill all required fields','error');return;}
+    rec={date:V('s-date').value,asset:V('s-asset').value,qty:+V('s-qty').value,fees:+V('s-fees').value||0,netQty:+V('s-nqty').value||0,price:+V('s-price').value,amount:+V('s-amt').value||0,bank:V('s-bank').value,pm:V('s-pm').value,p2pId:V('s-p2p').value,utr:V('s-utr').value};
+  }else{
+    ok=chk([{id:'e-date'},{id:'e-cat'},{id:'e-amt',fn:v=>v&&+v>0}]);
+    if(!ok){toast('Fill all required fields','error');return;}
+    rec={date:V('e-date').value,category:V('e-cat').value,amount:+V('e-amt').value,notes:V('e-notes').value};
+  }
+  const mId=t==='expenses'?'msg-exp':`msg-${t}`;
+  V(mId).textContent='⏳ Saving…';
+  if(URL_GS){try{await fetch(URL_GS,{method:'POST',body:JSON.stringify({action:'addRow',sheet:t,record:rec}),headers:{'Content-Type':'application/json'}});toast(`${t==='buy'?'Buy order':t==='sell'?'Sell order':'Expense'} saved to Google Sheets ✓`,'success');}catch(e){toast('Saved locally — Google Sheets unreachable','info');}}
+  else toast('Saved locally — add Script URL in Admin to sync','info');
+  if(t==='buy')D.buys.push(rec);else if(t==='sell')D.sells.push(rec);else D.expenses.push(rec);
+  recalc();paint(D);
+  if(t==='buy'){tog('af-buy');clr('buy');}else if(t==='sell'){tog('af-sell');clr('sell');}else{tog('af-exp');clr('expenses');}
+  V(mId).textContent='';
+}
+function recalc(){const tB=D.buys.reduce((s,r)=>s+r.amount,0),tS=D.sells.reduce((s,r)=>s+r.amount,0),tE=D.expenses.reduce((s,r)=>s+r.amount,0);D.summary={totalBuy:tB,totalSell:tS,totalExpenses:tE,netProfit:tS-tB-tE};}
+
+// ═══════════════════════════
+// EDIT / DELETE
+// ═══════════════════════════
+function editRow(t,i){
+  const arr=t==='buy'?D.buys:t==='sell'?D.sells:D.expenses;
+  const r=arr[i]; if(!r)return;
+  const prefix=t==='buy'?'br':t==='sell'?'sr':'er';
+  const row=V(`${prefix}-${i}`); if(!row)return;
+  if(t==='buy'||t==='sell'){
+    row.innerHTML=`<td class="mono">${i+1}</td>
+      <td><input class="ie" style="width:100px" value="${r.date}" id="ei-d"/></td>
+      <td><select class="ie" id="ei-a" style="width:72px">${CFG.assets.map(a=>`<option${a===r.asset?' selected':''}>${a}</option>`).join('')}</select></td>
+      <td><input class="ie" style="width:62px" type="number" value="${r.qty}" id="ei-q"/></td>
+      <td><input class="ie" style="width:52px" type="number" value="${r.fees}" id="ei-f"/></td>
+      <td class="mono">${r.netQty}</td>
+      <td><input class="ie" style="width:82px" type="number" value="${r.price}" id="ei-p"/></td>
+      <td class="amt">${fmt(r.amount)}</td>
+      <td><select class="ie" id="ei-bk" style="width:72px">${CFG.banks.map(b=>`<option${b===r.bank?' selected':''}>${b}</option>`).join('')}</select></td>
+      <td><select class="ie" id="ei-pm" style="width:62px">${CFG.pm.map(p=>`<option${p===r.pm?' selected':''}>${p}</option>`).join('')}</select></td>
+      <td><input class="ie" style="width:72px" value="${r.p2pId||''}" id="ei-id"/></td>
+      <td><input class="ie" style="width:82px" value="${r.utr||''}" id="ei-u"/></td>
+      <td class="acts"><button class="btn btn-success btn-xs" onclick="saveEdit('${t}',${i})">✔</button><button class="btn btn-ghost btn-xs" onclick="paintTables(D)">✕</button></td>`;
+  }else{
+    row.innerHTML=`<td class="mono">${i+1}</td>
+      <td><input class="ie" style="width:100px" value="${r.date}" id="ei-d"/></td>
+      <td><select class="ie" id="ei-c" style="width:92px">${CFG.cats.map(c=>`<option${c===r.category?' selected':''}>${c}</option>`).join('')}</select></td>
+      <td><input class="ie" style="width:82px" type="number" value="${r.amount}" id="ei-a"/></td>
+      <td><input class="ie" style="width:140px" value="${r.notes||''}" id="ei-n"/></td>
+      <td class="acts"><button class="btn btn-success btn-xs" onclick="saveEdit('expenses',${i})">✔</button><button class="btn btn-ghost btn-xs" onclick="paintTables(D)">✕</button></td>`;
+  }
+}
+async function saveEdit(t,i){
+  const arr=t==='buy'?D.buys:t==='sell'?D.sells:D.expenses;
+  if(t==='buy'||t==='sell'){const q=+V('ei-q').value||0,f=+V('ei-f').value||0,p=+V('ei-p').value||0;arr[i]={date:V('ei-d').value,asset:V('ei-a').value,qty:q,fees:f,netQty:+(q-f).toFixed(8),price:p,amount:+((q-f)*p).toFixed(2),bank:V('ei-bk').value,pm:V('ei-pm').value,p2pId:V('ei-id').value,utr:V('ei-u').value};}
+  else arr[i]={date:V('ei-d').value,category:V('ei-c').value,amount:+V('ei-a').value||0,notes:V('ei-n').value};
+  if(URL_GS){try{await fetch(URL_GS,{method:'POST',body:JSON.stringify({action:'editRow',sheet:t,idx:i,record:arr[i]}),headers:{'Content-Type':'application/json'}});}catch(e){}}
+  recalc();paint(D);toast('Row updated','success');
+}
+function delRow(t,i){
+  if(!confirm(`Delete this ${t} record?`))return;
+  const arr=t==='buy'?D.buys:t==='sell'?D.sells:D.expenses;
+  arr.splice(i,1);
+  if(URL_GS){fetch(URL_GS,{method:'POST',body:JSON.stringify({action:'deleteRow',sheet:t,idx:i}),headers:{'Content-Type':'application/json'}}).catch(()=>{});}
+  recalc();paint(D);toast('Deleted','info');
+}
+
+// ═══════════════════════════
+// TAX
+// ═══════════════════════════
+function paintTax(d){
+  const s=d.summary;
+  V('tax-buy').innerHTML=d.buys.map(r=>`<tr><td>${r.date}</td><td>${X(r.asset)}</td><td>${r.qty}</td><td>${r.fees}</td><td>${r.netQty}</td><td>${fmt(r.price)}</td><td class="amt">${fmt(r.amount)}</td><td>${X(r.bank)}</td><td>${X(r.pm)}</td><td>${X(r.p2pId||'—')}</td><td>${X(r.utr||'—')}</td></tr>`).join('')||'<tr><td colspan="11" class="empty-td">No data</td></tr>';
+  V('tc-buy').textContent=`${d.buys.length} records`;
+  V('tax-sell').innerHTML=d.sells.map(r=>`<tr><td>${r.date}</td><td>${X(r.asset)}</td><td>${r.qty}</td><td>${r.fees}</td><td>${r.netQty}</td><td>${fmt(r.price)}</td><td class="amt pos">${fmt(r.amount)}</td><td>${X(r.bank)}</td><td>${X(r.pm)}</td><td>${X(r.p2pId||'—')}</td><td>${X(r.utr||'—')}</td></tr>`).join('')||'<tr><td colspan="11" class="empty-td">No data</td></tr>';
+  V('tc-sell').textContent=`${d.sells.length} records`;
+  V('tax-exp').innerHTML=d.expenses.map(r=>`<tr><td>${r.date}</td><td>${X(r.category)}</td><td class="amt neg">${fmt(r.amount)}</td><td>${X(r.notes||'—')}</td></tr>`).join('')||'<tr><td colspan="4" class="empty-td">No data</td></tr>';
+  V('tc-exp').textContent=`${d.expenses.length} records`;
+  V('tt-buy').textContent=fmt(s.totalBuy); V('tt-sell').textContent=fmt(s.totalSell); V('tt-exp').textContent=fmt(s.totalExpenses);
+  V('ps-buy').textContent=fmt(s.totalBuy); V('ps-sell').textContent=fmt(s.totalSell); V('ps-exp').textContent=fmt(s.totalExpenses);
+  const pe=V('ps-profit'); pe.textContent=fmt(s.netProfit); pe.className='amt '+(s.netProfit>=0?'pos':'neg');
+}
+
+// ═══════════════════════════
+// LEDGER
+// ═══════════════════════════
+function paintLedger(d){
+  const rows=[...d.buys.map(r=>({date:r.date,type:'BUY',label:r.asset,amount:r.amount,fees:r.fees,net:r.netQty,note:r.bank})),...d.sells.map(r=>({date:r.date,type:'SELL',label:r.asset,amount:r.amount,fees:r.fees,net:r.netQty,note:r.bank})),...d.expenses.map(r=>({date:r.date,type:'EXPENSE',label:r.category,amount:r.amount,fees:0,net:0,note:r.notes}))].sort((a,b)=>a.date.localeCompare(b.date));
+  V('tb-ledger').innerHTML=rows.length?rows.map((r,i)=>`<tr><td class="mono">${i+1}</td><td>${r.date}</td><td><span class="badge b-${r.type==='EXPENSE'?'exp':r.type.toLowerCase()}">${r.type}</span></td><td><b>${X(r.label)}</b></td><td class="amt ${r.type==='SELL'?'pos':r.type==='EXPENSE'?'neg':''}">${fmt(r.amount)}</td><td class="mono">${r.fees||'—'}</td><td class="mono">${r.net||'—'}</td><td>${X(r.note||'—')}</td></tr>`).join(''):'<tr><td colspan="8" class="empty-td">📒 No data</td></tr>';
+}
+
+// ═══════════════════════════
+// MINI STATS
+// ═══════════════════════════
+function paintMini(d){
+  const ab={},as={};
+  d.buys.forEach(r=>{ab[r.asset]=(ab[r.asset]||0)+r.amount;});
+  d.sells.forEach(r=>{as[r.asset]=(as[r.asset]||0)+r.amount;});
+  V('ab-buy').innerHTML=Object.keys(ab).length?Object.entries(ab).map(([a,v])=>`<div class="mini-stat"><span>🪙 ${X(a)}</span><span class="mini-val">${fmt(v)}</span></div>`).join(''):'<div style="padding:12px;text-align:center;color:var(--muted);font-size:.76rem">No data</div>';
+  V('ab-sell').innerHTML=Object.keys(as).length?Object.entries(as).map(([a,v])=>`<div class="mini-stat"><span>🪙 ${X(a)}</span><span class="mini-val">${fmt(v)}</span></div>`).join(''):'<div style="padding:12px;text-align:center;color:var(--muted);font-size:.76rem">No data</div>';
+  const s=d.summary,roi=s.totalBuy>0?((s.netProfit/s.totalBuy)*100).toFixed(2):0;
+  V('qs').innerHTML=`<div class="mini-stat"><span>Total Volume</span><span class="mini-val">${fmt(s.totalBuy+s.totalSell)}</span></div><div class="mini-stat"><span>Buy Orders</span><span class="mini-val">${d.buys.length}</span></div><div class="mini-stat"><span>Sell Orders</span><span class="mini-val">${d.sells.length}</span></div><div class="mini-stat"><span>ROI</span><span class="mini-val" style="color:${+roi>=0?'var(--green)':'var(--red)'}">${roi}%</span></div><div class="mini-stat"><span>Expenses</span><span class="mini-val">${d.expenses.length}</span></div>`;
+}
+
+// ═══════════════════════════
+// ADMIN
+// ═══════════════════════════
+function renderAdmin(){
+  ['assets','banks','pm','cats'].forEach(k=>renderAList(k));
+}
+function renderAList(k){
+  const items=CFG[k];
+  const listEl=V(`al-${k}`);
+  V(`cnt-${k}`).textContent=items.length;
+  if(!items.length){listEl.innerHTML='<div class="a-empty">No items yet</div>';return;}
+  listEl.innerHTML=items.map((v,i)=>`<div class="a-item" id="ai-${k}-${i}"><div class="a-name"><span class="dot"></span><span id="albl-${k}-${i}">${X(v)}</span></div><div class="a-btns"><button class="btn btn-ghost btn-xs" onclick="editItem('${k}',${i})">✏</button><button class="btn btn-danger btn-xs" onclick="rmItem('${k}',${i})">✕</button></div></div>`).join('');
+}
+function addItem(k){
+  const inp=V(`na-${k}`);const v=inp.value.trim().toUpperCase();
+  if(!v){toast('Enter a value','error');return;}
+  if(CFG[k].includes(v)){toast(`"${v}" already exists`,'error');return;}
+  CFG[k].push(v);inp.value='';saveCfg();renderAdmin();fillDrops();toast(`"${v}" added`,'success');
+}
+function editItem(k,i){
+  const lbl=V(`albl-${k}-${i}`);const item=V(`ai-${k}-${i}`);
+  lbl.outerHTML=`<input class="ie" id="albl-${k}-${i}" value="${X(CFG[k][i])}" style="width:110px" onkeydown="if(event.key==='Enter')saveItem('${k}',${i})"/>`;
+  item.querySelector('.a-btns').innerHTML=`<button class="btn btn-success btn-xs" onclick="saveItem('${k}',${i})">✔</button><button class="btn btn-ghost btn-xs" onclick="renderAdmin()">✕</button>`;
+  V(`albl-${k}-${i}`)?.focus();
+}
+function saveItem(k,i){const v=V(`albl-${k}-${i}`)?.value?.trim()?.toUpperCase();if(!v){toast('Cannot be empty','error');return;}CFG[k][i]=v;saveCfg();renderAdmin();fillDrops();toast('Updated','success');}
+function rmItem(k,i){const v=CFG[k][i];if(!confirm(`Remove "${v}"?`))return;CFG[k].splice(i,1);saveCfg();renderAdmin();fillDrops();toast(`"${v}" removed`,'info');}
+function saveCfg(){localStorage.setItem('alfynx_cfg',JSON.stringify(CFG));}
+async function syncToSheet(){
+  if(!URL_GS){toast('Add Script URL first','error');return;}
+  try{await fetch(URL_GS,{method:'POST',body:JSON.stringify({action:'updateConfig',config:CFG}),headers:{'Content-Type':'application/json'}});toast('Config synced ✓','success');}
+  catch(e){toast('Sync failed — check URL','error');}
+}
+function exportCfg(){const b=new Blob([JSON.stringify(CFG,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='alfynx-config.json';a.click();toast('Exported','success');}
+function saveUrl(){const u=V('url-inp').value.trim();if(!u.startsWith('https://')){toast('Enter valid HTTPS URL','error');return;}URL_GS=u;localStorage.setItem('alfynx_url',u);toast('URL saved!','success');}
+async function testUrl(){
+  const u=V('url-inp').value.trim(),m=V('url-msg');
+  if(!u){toast('Enter a URL first','error');return;}
+  m.textContent='⏳ Testing…';m.style.color='var(--muted)';
+  try{const r=await fetch(u,{method:'POST',body:JSON.stringify({action:'ping'}),headers:{'Content-Type':'application/json'}});if(r.ok){m.textContent='✅ Connected!';m.style.color='var(--green)';toast('Connected!','success');}else throw 0;}
+  catch(e){m.textContent='❌ Failed';m.style.color='var(--red)';toast('Could not connect','error');}
+}
+
+// ═══════════════════════════
+// NAV
+// ═══════════════════════════
+const SECTIONS=['overview','transactions','tax','ledger','admin'];
+function go(name){
+  SECTIONS.forEach(s=>{
+    V(`s-${s}`)?.classList.toggle('active',s===name);
+  });
+  // Desktop sidebar
+  document.querySelectorAll('.nav-link').forEach((el,i)=>el.classList.toggle('active',SECTIONS[i]===name));
+  // Mobile bottom nav
+  document.querySelectorAll('.bn-item').forEach((el,i)=>el.classList.toggle('active',SECTIONS[i]===name));
+}
+function txTab(name,btn){
+  document.querySelectorAll('.tx-pane').forEach(el=>el.classList.remove('active'));
+  document.querySelectorAll('.tx-tab').forEach(el=>el.classList.remove('active'));
+  V(`tp-${name}`)?.classList.add('active');
+  btn?.classList.add('active');
+}
+
+// ═══════════════════════════
+// UTILS
+// ═══════════════════════════
+function fmt(n){return'₹'+(n||0).toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});}
+function fmtS(v){if(v>=10000000)return'₹'+(v/10000000).toFixed(1)+'Cr';if(v>=100000)return'₹'+(v/100000).toFixed(1)+'L';if(v>=1000)return'₹'+(v/1000).toFixed(0)+'K';return'₹'+v;}
+function X(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function loader(on){const el=V('loader');on?el.classList.remove('gone'):el.classList.add('gone');}
+function toast(msg,type='info'){
+  const w=V('toasts'),id='t'+Date.now();
+  const ic=type==='success'?'✅':type==='error'?'❌':'ℹ️';
+  const el=document.createElement('div');el.className=`toast ${type}`;el.id=id;
+  el.innerHTML=`<span>${ic}</span><span style="flex:1">${X(msg)}</span><span class="tc" onclick="V('${id}').remove()">✕</span>`;
+  w.appendChild(el);
+  setTimeout(()=>{const t=V(id);if(t){t.style.cssText='opacity:0;transform:translateY(8px);transition:all .28s';setTimeout(()=>t.remove(),290);}},3500);
+}
+</script>
+</body>
+</html>
